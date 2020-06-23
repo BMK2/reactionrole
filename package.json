@@ -1,0 +1,16 @@
+{
+  "name": "@botsmk2/reactionrole",
+  "version": "1.0.0",
+  "description": "React to a post to get or remove a role",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/creationTest.js"
+  },
+  "keywords": [
+    "reaction role",
+    "battlemanmk2",
+    "botsmk2"
+  ],
+  "author": "BattlemanMK2",
+  "license": "MIT"
+}
