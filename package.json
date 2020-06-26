@@ -12,5 +12,9 @@
     "botsmk2"
   ],
   "author": "BattlemanMK2",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "12.2.0",
+    "mongoose": "5.9.19"
+  }
 }
