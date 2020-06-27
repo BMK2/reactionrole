@@ -35,6 +35,7 @@ class ReactionRoleModule {
         });
         this.reactionMessages.push(reactionMessage);
       });
+      console.log(`Loaded ${this.reactionMessages.length} reaction messages`);
     }.bind(this));
   }
 
@@ -50,7 +51,6 @@ class ReactionRoleModule {
         break;
       case "rrcreate": // rrcreate [Description]
         const reactionPost = this.newReactionPost(message);
-        reactionPost.save();
         this.reactionMessages.push(reactionPost);
         break;
       case 'rraddrole': // rradrolle <Message ID> <Mentioned Role> <Emoji>
@@ -99,9 +99,8 @@ class ReactionMessage {
       channel.send({embed: this.createEmbed()}).then(function(message){
         this.messageID = message.id;
         this.channelID = message.channel.id;
-        message.edit({embed: this.createEmbed()}).then(function(message) {
-          this.save();
-        }.bind(this));
+        message.edit({embed: this.createEmbed()});
+        this.save();
       }.bind(this));
     }
 
