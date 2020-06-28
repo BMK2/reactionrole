@@ -14,7 +14,6 @@ const reactionMessageSchema = new mongoose.Schema({
   }]
 });
 
-
 class ReactionRoleModule {
   reactionMessages = [];
 
@@ -22,21 +21,6 @@ class ReactionRoleModule {
     this.discordClient = client;
     this.discordClient.on('commandPrefixUsed', (message) => {this.parseCommand(message)});
     this.loadReactionMessages();
-  }
-
-  loadReactionMessages() {
-    const MessageModel = this.discordClient.db.botDB.model('ReactionMessage', reactionMessageSchema);
-    MessageModel.find(function(error, docs) {
-      docs.forEach(doc => {
-        let reactionMessage = new ReactionMessage(this.discordClient, doc.channelID, doc.description);
-        reactionMessage.setMessageID(doc.messageID);
-        doc.roles.forEach(role => {
-          reactionMessage.loadRole(new ReactionRole(role.roleID, role.emoji, role.mentionable));
-        });
-        this.reactionMessages.push(reactionMessage);
-      });
-      console.log(`Loaded ${this.reactionMessages.length} reaction messages`);
-    }.bind(this));
   }
 
   parseCommand(message) {
@@ -52,6 +36,16 @@ class ReactionRoleModule {
       case "rrcreate": // rrcreate [Description]
         const reactionPost = this.newReactionPost(message);
         this.reactionMessages.push(reactionPost);
+        break;
+      case "rrdelete": // rrdelete <Message ID>
+        this.reactionMessages.forEach(reactionMessage => {
+          this.discordClient.guilds.cache.get(process.env.HOME_GUILD).channels.cache.get(reactionMessage.getChannelID()).messages.fetch(reactionMessage.getMessageID()).then(function(message){
+            message.delete();
+          });
+          const MessageModel = this.discordClient.db.botDB.model('ReactionMessage', reactionMessageSchema);
+          MessageModel.deleteOne({messageID: reactionMessage.getMessageID()});
+          this.reactionMessages.splice(this.reactionMessages.indexOf(reactionMessage), 1);
+        });
         break;
       case 'rraddrole': // rradrolle <Message ID> <Mentioned Role> <Emoji>
         this.reactionMessages.forEach(rrMessage => {
@@ -80,6 +74,24 @@ class ReactionRoleModule {
     newMessage.post(message.channel);
     return newMessage;
   }
+
+  loadReactionMessages() {
+    const MessageModel = this.discordClient.db.botDB.model('ReactionMessage', reactionMessageSchema);
+    MessageModel.find(function(error, docs) {
+      docs.forEach(doc => {
+        let reactionMessage = new ReactionMessage(this.discordClient, doc.channelID, doc.description);
+        reactionMessage.setMessageID(doc.messageID);
+        this.discordClient.guilds.cache.get(process.env.HOME_GUILD).channels.cache.get(reactionMessage.getChannelID()).messages.fetch(reactionMessage.getMessageID()).then(function(message){
+            reactionMessage.addReactionCollector(message);
+          }.bind(reactionMessage));
+        doc.roles.forEach(role => {
+          reactionMessage.loadRole(new ReactionRole(role.roleID, role.emoji, role.mentionable));
+        });
+        this.reactionMessages.push(reactionMessage);
+      });
+      console.log(`Loaded ${this.reactionMessages.length} reaction messages`);
+    }.bind(this));
+  }
 }
 
 class ReactionMessage {
@@ -88,6 +100,7 @@ class ReactionMessage {
     description = null;
     discordClient;
     roles = [];
+    reactionCollector;
     
     constructor(discordClient, channelID, description) {
       this.discordClient = discordClient;
@@ -100,8 +113,51 @@ class ReactionMessage {
         this.messageID = message.id;
         this.channelID = message.channel.id;
         message.edit({embed: this.createEmbed()});
+        this.addReactionCollector(message);
         this.save();
       }.bind(this));
+    }
+
+    addReactionCollector(message) {
+      this.reactionCollector = message.createReactionCollector((reaction, user) => true, {dispose: true});
+      this.reactionCollector.on('collect', function(reaction, user) {
+        if(!user.bot) {
+          console.log(`A reaction has been collected: ${reaction} from user: ${user}`);
+          this.giveUserRole(reaction, user);
+        } else {
+          console.log(`Bot added reaction: ${reaction}`);
+        }
+      }.bind(this));
+      this.reactionCollector.on('remove', function(reaction, user) {
+        if(!user.bot) {
+          console.log(`A reaction has been removed: ${reaction} from user: ${user}`);
+          this.takeUserRole(reaction, user);
+        } else {
+          console.log(`Bot added reaction: ${reaction}`);
+        }
+      }.bind(this));
+    }
+
+    giveUserRole(reaction, user) {
+      // TODO: Make sure bot an actually give user the role
+      reaction.message.guild.member(user).roles.add(this.parseReaction(reaction));
+    }
+
+    takeUserRole(reaction, user) {
+      // TODO: Make sure bot an actually give user the role
+      reaction.message.guild.member(user).roles.remove(this.parseReaction(reaction));
+    }
+
+    parseReaction(reaction) {
+      let reactionID;
+      if(reaction.emoji.id == null) {
+        reactionID = reaction.emoji.name;
+      } else {
+        reactionID = reaction.emoji.id;
+      }
+      let reactionRole;
+      this.roles.forEach(role => {if(role.emoji == reactionID) reactionRole = role});
+      return reaction.message.guild.roles.cache.get(reactionRole.getRoleID());
     }
 
     createEmbed() {
@@ -143,6 +199,7 @@ class ReactionMessage {
     }
 
     addRole(channel, role, emoji) {
+      // TODO: Need to add a check that the emoji is available to the bot
       const rRole = new ReactionRole(role.id, emoji, role.toString());
       this.roles.push(rRole);
       this.save();
