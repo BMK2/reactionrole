@@ -66,6 +66,7 @@ class ReactionRoleModule {
         });
         break;
     }
+    message.delete();
   }
 
   newReactionPost(message) {
