@@ -3,17 +3,20 @@ const ReactionRole = require('./ReactionRole');
 const reactionMessageSchema = require('./ReactionMessageSchema');
 
 class ReactionMessage {
-  messageID = null;
-  channelID;
-  description = null;
-  discordClient;
-  roles = [];
-  reactionCollector;
+  //messageID = null;
+  //channelID;
+  //description = null;
+  //discordClient;
+  //roles = [];
+  //reactionCollector;
   
   constructor(discordClient, channelID, description) {
+    this.messageID = null;
     this.discordClient = discordClient;
     this.description = description;
     this.channelID = channelID;
+    this.roles = [];
+    this.reactionCollector = null;
   }
 
   post(channel) {

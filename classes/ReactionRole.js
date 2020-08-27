@@ -1,8 +1,8 @@
 class ReactionRole {
-  roleID;
-  emoji;
-  custom;
-  mentionable;
+  //roleID;
+  //emoji;
+  //custom;
+  //mentionable;
   
   constructor(roleID, emoji, mentionable) {
     const emojiID = emoji.match(/\d+/g);
