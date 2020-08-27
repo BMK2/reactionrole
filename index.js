@@ -1,25 +1,11 @@
-const Discord = require('discord.js');
-const MongoDB = require('@botsmk2/mongodb');
-const mongoose = require('mongoose');
 const ReactionRole = require('./classes/ReactionRole');
 const ReactionMessage = require('./classes/ReactionMessage');
-
-const reactionMessageSchema = new mongoose.Schema({
-  messageID: String,
-  channelID: String,
-  description: String,
-  roles: [{
-    roleID: String,
-    emoji: String,
-    custom: Boolean,
-    mentionable: String
-  }]
-});
+const reactionMessageSchema = require('./classes/ReactionMessageSchema');
 
 class ReactionRoleModule {
-  reactionMessages = [];
 
   constructor(client) {
+    this.reactionMessages = [];
     this.discordClient = client;
     this.discordClient.on('commandPrefixUsed', (message) => {this.parseCommand(message)});
     this.loadReactionMessages();

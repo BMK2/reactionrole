@@ -1,3 +1,7 @@
+const Discord = require('discord.js');
+const ReactionRole = require('./ReactionRole');
+const reactionMessageSchema = require('./ReactionMessageSchema');
+
 class ReactionMessage {
   messageID = null;
   channelID;
@@ -26,7 +30,6 @@ class ReactionMessage {
     this.reactionCollector = message.createReactionCollector((reaction, user) => true, {dispose: true});
     this.reactionCollector.on('collect', function(reaction, user) {
       if(!user.bot) {
-        console.log(`A reaction has been collected: ${reaction} from user: ${user}`);
         this.giveUserRole(reaction, user);
       } else {
         console.log(`Bot added reaction: ${reaction}`);
@@ -34,7 +37,6 @@ class ReactionMessage {
     }.bind(this));
     this.reactionCollector.on('remove', function(reaction, user) {
       if(!user.bot) {
-        console.log(`A reaction has been removed: ${reaction} from user: ${user}`);
         this.takeUserRole(reaction, user);
       } else {
         console.log(`Bot added reaction: ${reaction}`);
@@ -44,12 +46,12 @@ class ReactionMessage {
 
   giveUserRole(reaction, user) {
     // TODO: Make sure bot can actually give user the role
-    reaction.message.guild.member(user).roles.add(this.parseReaction(reaction));
+    reaction.message.guild.member(user).roles.add(this.parseReaction(reaction), 'User reacted to a ReactionRole message');
   }
 
   takeUserRole(reaction, user) {
     // TODO: Make sure bot can actually give user the role
-    reaction.message.guild.member(user).roles.remove(this.parseReaction(reaction));
+    reaction.message.guild.member(user).roles.remove(this.parseReaction(reaction), 'User reacted to a ReactionRole message');
   }
 
   parseReaction(reaction) {
@@ -103,8 +105,11 @@ class ReactionMessage {
   }
 
   addRole(channel, role, emoji) {
-    // TODO: Need to add a check that the emoji is available to the bot
     const rRole = new ReactionRole(role.id, emoji, role.toString());
+    if(this.discordClient.emojis.cache.get(rRole.getEmoji()) == undefined) {
+      channel.send(`I am not able to use the emoji that you requested: \`${emoji}\``);
+      return;
+    }
     this.roles.push(rRole);
     this.save();
     channel.messages.fetch(this.messageID).then(function(message) {
